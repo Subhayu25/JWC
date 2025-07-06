@@ -23,42 +23,24 @@ from mlxtend.frequent_patterns import apriori, association_rules
 import warnings
 warnings.filterwarnings("ignore")
 
-# --- Streamlit Page Setup ---
+# --- STREAMLIT PAGE SETUP ---
 st.set_page_config(
     page_title="Jio World Centre Analytics Dashboard",
     page_icon=":bar_chart:",
     layout="wide"
 )
 
-# === SIDEBAR WITH LOGO UPLOAD & GITHUB FALLBACK ===
-st.sidebar.title("Jio World Centre Dashboard")
-uploaded_logo = st.sidebar.file_uploader(
-    "Upload Logo (PNG/JPG)",
-    type=["png", "jpg", "jpeg"],
-    help="Optional: override default logo"
+# --- DISPLAY LOGO AT TOP (FROM GITHUB) ---
+logo_url = (
+    "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/"
+    "data/logo_jwc.png"
 )
-if uploaded_logo:
-    st.sidebar.image(uploaded_logo, width=180)
-elif os.path.exists("data/logo_jwc.png"):
-    st.sidebar.image("data/logo_jwc.png", width=180)
-else:
-    # fallback to GitHub raw URL (replace placeholders accordingly)
-    github_logo_url = (
-        "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/"
-        "data/logo_jwc.png"
-    )
-    st.sidebar.image(github_logo_url, width=180)
+st.image(logo_url, width=250)
 
-theme = st.sidebar.selectbox("Choose Theme", ["Light", "Dark"])
-if theme == "Dark":
-    st.markdown(
-        "<style>body{background:#212121;color:#F5F5F5;} </style>",
-        unsafe_allow_html=True
-    )
-
-# --- Load data safely, with GitHub fallback ---
+# --- LOAD DATA WITH GITHUB FALLBACK ---
 @st.cache_data
 def load_data():
+    # try local first
     local_paths = [
         "data/JioWorldCentre_Survey_Synthetic.csv",
         "JioWorldCentre_Survey_Synthetic.csv"
@@ -66,34 +48,44 @@ def load_data():
     for path in local_paths:
         if os.path.exists(path):
             return pd.read_csv(path)
-    # fallback to GitHub raw URL (replace placeholders accordingly)
+    # fallback to GitHub raw
     github_url = (
         "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/"
         "data/JioWorldCentre_Survey_Synthetic.csv"
     )
     df = pd.read_csv(github_url)
-    st.sidebar.success("Loaded CSV from GitHub")
+    st.sidebar.success("Loaded dataset from GitHub")
     return df
 
 df = load_data()
 
-# --- Executive Summary (dark blue background, white text) ---
+# --- SIDEBAR THEME SELECTION ---
+st.sidebar.title("Settings")
+theme = st.sidebar.selectbox("Choose Theme", ["Light", "Dark"])
+if theme == "Dark":
+    st.markdown(
+        "<style>body{background:#121212;color:#ECEFF1;} </style>",
+        unsafe_allow_html=True
+    )
+
+# --- EXECUTIVE SUMMARY ---
 st.markdown("# Jio World Centre, Mumbai: Consumer Insights Dashboard")
 st.markdown(
     """
-    <div style='background:#002f6c; padding:20px; border-radius:10px;'>
-      <h3 style='color:#ffffff; margin:0;'>Executive Summary</h3>
-      <p style='color:#ffffff; font-size:16px;'>
-        This dashboard analyzes a synthetic event consumer dataset from Jio World Centre, Mumbai,
-        using machine learning, clustering, regression, and association rule mining. Explore visitor
-        personas, spending patterns, satisfaction scores, and business opportunities interactively.
+    <div style='background:#003366; padding:20px; border-radius:10px;'>
+      <h2 style='color:#FFFFFF; margin:0;'>Executive Summary</h2>
+      <p style='color:#FFD700; font-size:16px;'>
+        This interactive dashboard uses a realistic synthetic survey dataset  
+        to uncover visitor personas, spending patterns, satisfaction drivers,  
+        clustering segments, classification of sponsor interest, regression insights,  
+        and association rules at Jio World Centre, Mumbai.
       </p>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# --- Main Tabs ---
+# --- MAIN TABS ---
 tabs = st.tabs([
     "Data Visualisation",
     "Classification",
@@ -105,12 +97,10 @@ tabs = st.tabs([
 # ========== TAB 1: DATA VISUALISATION ==========
 with tabs[0]:
     st.markdown("## :bar_chart: Data Visualisation & Insights")
-
-    # Filters
-    with st.expander("Filter Data"):
-        gender = st.multiselect("Gender", df["Gender"].unique(), df["Gender"].unique())
-        city = st.multiselect("City", df["City"].unique(), df["City"].unique())
-        reason = st.multiselect("Visit Reason", df["VisitReason"].unique(), df["VisitReason"].unique())
+    with st.expander("Filters"):
+        gender = st.multiselect("Gender", df.Gender.unique(), df.Gender.unique())
+        city = st.multiselect("City", df.City.unique(), df.City.unique())
+        reason = st.multiselect("Visit Reason", df.VisitReason.unique(), df.VisitReason.unique())
         min_age, max_age = int(df.Age.min()), int(df.Age.max())
         age_range = st.slider("Age Range", min_age, max_age, (min_age, max_age))
         df_viz = df[
@@ -121,24 +111,24 @@ with tabs[0]:
         ]
         st.caption(f"**{len(df_viz)} responses filtered**")
 
-    # Metrics
+    # Key metrics
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("Median Spend per Visit (INR)", f"{int(df_viz.SpendPerVisitINR.median()):,}")
-        st.metric("Most Common Event Type", df_viz.VisitReason.mode()[0])
+        st.metric("Median Spend/Visit (INR)", f"{int(df_viz.SpendPerVisitINR.median()):,}")
+        st.metric("Top Event Type", df_viz.VisitReason.mode()[0])
     with c2:
-        st.metric("Most Preferred City", df_viz.City.mode()[0])
+        st.metric("Top City", df_viz.City.mode()[0])
         st.metric("Median Age", int(df_viz.Age.median()))
     with c3:
-        st.metric("Highest Food Spend (INR)", f"{int(df_viz.MaxFoodSpendINR.max()):,}")
+        st.metric("Max Food Spend (INR)", f"{int(df_viz.MaxFoodSpendINR.max()):,}")
         st.metric("Top Occupation", df_viz.Occupation.mode()[0])
 
     # 1. Age Distribution
     st.markdown("### Age Distribution")
-    fig, ax = plt.subplots()
-    sns.histplot(df_viz.Age, bins=20, kde=True, ax=ax, color="#4C72B0")
-    ax.set_xlabel("Age")
-    st.pyplot(fig)
+    fig1, ax1 = plt.subplots()
+    sns.histplot(df_viz.Age, bins=20, kde=True, ax=ax1, color="#4C72B0")
+    ax1.set_xlabel("Age")
+    st.pyplot(fig1)
     st.caption("Shows the age spread of attendees.")
 
     # 2. Spend per Visit by City & Event Type
@@ -154,7 +144,7 @@ with tabs[0]:
     st.plotly_chart(fig3, use_container_width=True)
     st.caption("Which occupations are most interested in networking?")
 
-    # 4. Event Attendance Frequency
+    # 4. Attendance Frequency
     st.markdown("### Event Attendance Frequency")
     fig4 = px.pie(df_viz, names="ParticipationFrequency", title="Attendance Frequency")
     st.plotly_chart(fig4)
@@ -188,33 +178,39 @@ with tabs[0]:
 
     # 9. Correlation Heatmap
     st.markdown("### Correlation Heatmap")
-    corr_cols = ["Age","MonthlyIncomeINR","EventsAttendedAnnually","SpendPerVisitINR","MaxFoodSpendINR","RecommendJioWorldCentre","OverallSatisfaction"]
-    corr = df_viz[corr_cols].corr()
+    corr_cols = [
+        "Age","MonthlyIncomeINR","EventsAttendedAnnually",
+        "SpendPerVisitINR","MaxFoodSpendINR",
+        "RecommendJioWorldCentre","OverallSatisfaction"
+    ]
     fig9, ax9 = plt.subplots(figsize=(7,5))
-    sns.heatmap(corr, annot=True, cmap="vlag", ax=ax9)
-    st.pyplot(fig9)
-    st.caption("Correlations reveal drivers of spend & satisfaction.")
+    sns.heatmap(df_viz[corr_cols].corr(), annot=True, cmap="vlag", ax=ax9)
+    st.plotly_chart(fig9)
+    st.caption("Correlations reveal key drivers.")
 
     # 10. Download Filtered Data
     st.markdown("### Download Filtered Data")
-    csv = df_viz.to_csv(index=False).encode()
-    st.download_button("Download CSV", csv, "Filtered_JWC.csv", "text/csv")
+    csv_data = df_viz.to_csv(index=False).encode()
+    st.download_button("Download CSV", csv_data, "filtered_data.csv", "text/csv")
 
 # ========== TAB 2: CLASSIFICATION ==========
 with tabs[1]:
     st.markdown("## :guardsman: Classification - Sponsor/Exhibitor Willingness")
     st.info("Target: SponsorOrExhibitorInterest == 'Yes'")
 
-    clf = df.copy()
-    clf['Sponsor_Label'] = (clf.SponsorOrExhibitorInterest == 'Yes').astype(int)
-    features = ["Age","MonthlyIncomeINR","EventsAttendedAnnually","SpendPerVisitINR","MaxFoodSpendINR","OverallSatisfaction"]
+    clf_df = df.copy()
+    clf_df['Sponsor_Label'] = (clf_df.SponsorOrExhibitorInterest == 'Yes').astype(int)
+    features = [
+        "Age","MonthlyIncomeINR","EventsAttendedAnnually",
+        "SpendPerVisitINR","MaxFoodSpendINR","OverallSatisfaction"
+    ]
     cat_cols = ['Gender','Education','Occupation','PreferredEventType']
     for col in cat_cols:
         le = LabelEncoder()
-        clf[col] = le.fit_transform(clf[col])
+        clf_df[col] = le.fit_transform(clf_df[col])
         features.append(col)
 
-    X = clf[features]; y = clf['Sponsor_Label']
+    X = clf_df[features]; y = clf_df['Sponsor_Label']
     Xtr, Xts, ytr, yts = train_test_split(X, y, stratify=y, test_size=0.25, random_state=42)
 
     models = {
@@ -223,7 +219,7 @@ with tabs[1]:
         'Random Forest': RandomForestClassifier(random_state=0),
         'Gradient Boosting': GradientBoostingClassifier(random_state=0)
     }
-    metrics = []; roc_data = {}
+    results = []; roc_data = {}
     for name, m in models.items():
         m.fit(Xtr, ytr)
         preds = m.predict(Xts)
@@ -231,7 +227,7 @@ with tabs[1]:
         prec = precision_score(yts, preds)
         rec = recall_score(yts, preds)
         f1 = f1_score(yts, preds)
-        metrics.append([name, acc, prec, rec, f1])
+        results.append([name, acc, prec, rec, f1])
         if hasattr(m, "predict_proba"):
             scores = m.predict_proba(Xts)[:,1]
         else:
@@ -239,20 +235,19 @@ with tabs[1]:
         fpr, tpr, _ = roc_curve(yts, scores)
         roc_data[name] = (fpr, tpr, auc(fpr, tpr))
 
-    mdf = pd.DataFrame(metrics, columns=["Model","Accuracy","Precision","Recall","F1-Score"])
-    st.dataframe(mdf.style.background_gradient(cmap="Blues"), use_container_width=True)
+    res_df = pd.DataFrame(results, columns=["Model","Accuracy","Precision","Recall","F1-Score"])
+    st.dataframe(res_df.style.background_gradient(cmap="Blues"), use_container_width=True)
 
     st.markdown("#### Confusion Matrix")
     sel = st.selectbox("Model", list(models.keys()))
-    m = models[sel]
-    cm = confusion_matrix(yts, m.predict(Xts))
+    cm = confusion_matrix(yts, models[sel].predict(Xts))
     fig_cm, ax_cm = plt.subplots()
     sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", ax=ax_cm,
                 xticklabels=["No","Yes"], yticklabels=["No","Yes"])
     ax_cm.set_xlabel("Predicted"); ax_cm.set_ylabel("Actual")
     st.pyplot(fig_cm)
 
-    st.markdown("#### ROC Curve")
+    st.markdown("#### ROC Curves")
     fig_roc, ax_roc = plt.subplots()
     for name, (fpr, tpr, roc_auc) in roc_data.items():
         ax_roc.plot(fpr, tpr, label=f"{name} (AUC={roc_auc:.2f})")
@@ -267,59 +262,63 @@ with tabs[1]:
         for col in cat_cols:
             le = LabelEncoder()
             new[col] = le.fit_transform(new[col].astype(str))
-        new_preds = m.predict(new[features])
+        new_preds = models[sel].predict(new[features])
         new["Predicted_Sponsor"] = ["Yes" if p==1 else "No" for p in new_preds]
         st.dataframe(new)
-        out = new.to_csv(index=False).encode()
-        st.download_button("Download Predictions", out, "Preds.csv", "text/csv")
+        out_csv = new.to_csv(index=False).encode()
+        st.download_button("Download Predictions", out_csv, "predictions.csv", "text/csv")
 
 # ========== TAB 3: CLUSTERING ==========
 with tabs[2]:
     st.markdown("## :busts_in_silhouette: Clustering - Customer Personas")
     cdf = df.copy()
-    numf = ["Age","MonthlyIncomeINR","EventsAttendedAnnually","SpendPerVisitINR","MaxFoodSpendINR","OverallSatisfaction"]
-    sc = StandardScaler()
-    Xc = sc.fit_transform(cdf[numf])
+    num_feats = [
+        "Age","MonthlyIncomeINR","EventsAttendedAnnually",
+        "SpendPerVisitINR","MaxFoodSpendINR","OverallSatisfaction"
+    ]
+    scaler = StandardScaler()
+    Xc = scaler.fit_transform(cdf[num_feats])
 
-    k = st.slider("Clusters (k)", 2, 10, 3)
+    k = st.slider("Number of Clusters (k)", 2, 10, 3)
     km = KMeans(n_clusters=k, random_state=42, n_init=10)
     cdf["Cluster"] = km.fit_predict(Xc)
 
-    inert = []; sils = []
+    inertias = []; sils = []
     for i in range(2,11):
         km2 = KMeans(n_clusters=i, random_state=42, n_init=10)
         labs = km2.fit_predict(Xc)
-        inert.append(km2.inertia_)
+        inertias.append(km2.inertia_)
         sils.append(silhouette_score(Xc, labs))
 
-    fig_elb = px.line(x=list(range(2,11)), y=inert, markers=True, title="Elbow Method")
+    fig_elb = px.line(x=list(range(2,11)), y=inertias, markers=True, title="Elbow Method")
     st.plotly_chart(fig_elb)
     fig_sil = px.line(x=list(range(2,11)), y=sils, markers=True, title="Silhouette Scores")
     st.plotly_chart(fig_sil)
 
     st.markdown("#### Cluster Personas")
-    pers = cdf.groupby("Cluster")[numf].mean().round(1)
-    st.dataframe(pers, use_container_width=True)
+    persona = cdf.groupby("Cluster")[num_feats].mean().round(1)
+    st.dataframe(persona, use_container_width=True)
 
-    dl = cdf.to_csv(index=False).encode()
-    st.download_button("Download Clustered Data", dl, "clustered.csv", "text/csv")
+    dl_csv = cdf.to_csv(index=False).encode()
+    st.download_button("Download Clustered Data", dl_csv, "clustered_data.csv", "text/csv")
 
 # ========== TAB 4: ASSOCIATION RULE MINING ==========
 with tabs[3]:
     st.markdown("## :bulb: Association Rule Mining")
     cols = ['FoodPreferences','ChallengesFaced']
-    selc = st.selectbox("Column", cols)
+    selc = st.selectbox("Select column", cols)
     ms = st.slider("Min Support", 0.01, 0.5, 0.05, 0.01)
     mc = st.slider("Min Confidence", 0.1, 1.0, 0.3, 0.05)
     td = df[selc].str.get_dummies(sep=',')
-    fi = apriori(td, min_support=ms, use_colnames=True)
-    rules = association_rules(fi, metric="confidence", min_threshold=mc).sort_values("confidence", ascending=False).head(10)
+    freq = apriori(td, min_support=ms, use_colnames=True)
+    rules = association_rules(freq, metric="confidence", min_threshold=mc)
+    rules = rules.sort_values("confidence", ascending=False).head(10)
     st.dataframe(rules[['antecedents','consequents','support','confidence','lift']])
-    st.markdown("**Interpretation:** Antecedents → Consequents with given confidence & lift.")
+    st.markdown("**Interpretation:** Antecedents → Consequents likely with given confidence & lift.")
 
 # ========== TAB 5: REGRESSION ==========
 with tabs[4]:
-    st.markdown("## :chart_with_upwards_trend: Regression & Predictive Insights")
+    st.markdown("## :chart_with_upwards_trend: Regression Insights")
     targets = ['SpendPerVisitINR','MaxFoodSpendINR','OverallSatisfaction']
     feats = ['Age','MonthlyIncomeINR','EventsAttendedAnnually','OverallSatisfaction']
     regs = {
@@ -329,27 +328,31 @@ with tabs[4]:
         "Decision Tree": DecisionTreeRegressor(random_state=0)
     }
     results = []
-    for tgt in targets:
-        y = df[tgt]; X = df[feats]
+    for t in targets:
+        y = df[t]; X = df[feats]
         Xtr, Xts, ytr, yts = train_test_split(X, y, test_size=0.2, random_state=42)
         for name, model in regs.items():
             model.fit(Xtr, ytr)
             r2 = model.score(Xts, yts)
-            results.append([name, tgt, round(r2,3)])
-    rdf = pd.DataFrame(results, columns=["Model","Target","R2"]).pivot("Model","Target","R2")
-    st.dataframe(rdf, use_container_width=True)
+            results.append([name, t, round(r2, 3)])
+
+    reg_df = pd.DataFrame(results, columns=["Model","Target","R2"]).pivot_table(
+        index="Model", columns="Target", values="R2", aggfunc="first"
+    )
+    st.dataframe(reg_df, use_container_width=True)
 
     lin = LinearRegression().fit(Xtr, ytr)
     preds = lin.predict(Xts)
-    figr, axr = plt.subplots()
-    axr.scatter(yts, preds, alpha=0.5)
-    axr.plot([yts.min(),yts.max()],[yts.min(),yts.max()],'r--')
-    axr.set_xlabel("Actual"); axr.set_ylabel("Predicted")
-    st.pyplot(figr)
+    fig_reg, ax_reg = plt.subplots()
+    ax_reg.scatter(yts, preds, alpha=0.5)
+    ax_reg.plot([yts.min(), yts.max()], [yts.min(), yts.max()], 'r--')
+    ax_reg.set_xlabel("Actual"); ax_reg.set_ylabel("Predicted")
+    st.pyplot(fig_reg)
+    st.caption("Points near the red line indicate accurate predictions.")
 
-    st.markdown("#### Insights")
+    st.markdown("#### Key Takeaways")
     st.write(
-        "- Income & satisfaction are strong predictors of spend.\n"
-        "- Ridge & Decision Tree often highest R².\n"
-        "- Outliers (luxury spenders) remain hard to predict."
+        "- Income & satisfaction strongly predict spend.\n"
+        "- Ridge & Decision Tree often yield highest R².\n"
+        "- Luxury spenders (outliers) are harder to model."
     )
