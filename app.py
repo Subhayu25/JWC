@@ -19,6 +19,7 @@ from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from mlxtend.frequent_patterns import apriori, association_rules
+from sklearn.inspection import permutation_importance
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -229,6 +230,7 @@ with tabs[1]:
     st.markdown("## :guardsman: Classification - Sponsor/Exhibitor Willingness")
     st.info("Target: SponsorOrExhibitorInterest == 'Yes'")
 
+    # Prepare data
     clf_df = df.copy()
     clf_df['Sponsor_Label'] = (clf_df.SponsorOrExhibitorInterest == 'Yes').astype(int)
     features = [
@@ -241,65 +243,91 @@ with tabs[1]:
         clf_df[col] = le.fit_transform(clf_df[col])
         features.append(col)
 
-    X = clf_df[features]; y = clf_df['Sponsor_Label']
-    Xtr, Xts, ytr, yts = train_test_split(X, y, stratify=y, test_size=0.25, random_state=42)
+    X = clf_df[features]
+    y = clf_df['Sponsor_Label']
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, stratify=y, test_size=0.25, random_state=42
+    )
 
+    # Train models
     models = {
-        'KNN': KNeighborsClassifier(),
+        'K-Nearest Neighbors': KNeighborsClassifier(),
         'Decision Tree': DecisionTreeClassifier(random_state=0),
         'Random Forest': RandomForestClassifier(random_state=0),
         'Gradient Boosting': GradientBoostingClassifier(random_state=0)
     }
-    results = []; roc_data = {}
-    for name, m in models.items():
-        m.fit(Xtr, ytr)
-        preds = m.predict(Xts)
-        acc = accuracy_score(yts, preds)
-        prec = precision_score(yts, preds)
-        rec = recall_score(yts, preds)
-        f1 = f1_score(yts, preds)
-        results.append([name, acc, prec, rec, f1])
-        if hasattr(m, "predict_proba"):
-            scores = m.predict_proba(Xts)[:,1]
+    results = []
+    roc_data = {}
+
+    for name, mdl in models.items():
+        mdl.fit(X_train, y_train)
+        y_pred = mdl.predict(X_test)
+        results.append([
+            name,
+            accuracy_score(y_test, y_pred),
+            precision_score(y_test, y_pred),
+            recall_score(y_test, y_pred),
+            f1_score(y_test, y_pred)
+        ])
+        # ROC
+        if hasattr(mdl, "predict_proba"):
+            scores = mdl.predict_proba(X_test)[:,1]
         else:
-            scores = m.decision_function(Xts)
-        fpr, tpr, _ = roc_curve(yts, scores)
+            scores = mdl.decision_function(X_test)
+        fpr, tpr, _ = roc_curve(y_test, scores)
         roc_data[name] = (fpr, tpr, auc(fpr, tpr))
 
-    res_df = pd.DataFrame(results, columns=["Model","Accuracy","Precision","Recall","F1-Score"])
-    st.dataframe(res_df.style.background_gradient(cmap="Blues"), use_container_width=True)
-    st.markdown("**Interpretation:** Compare metrics to choose the best model for predicting sponsor interest.")
+    # Metrics table
+    metrics_df = pd.DataFrame(
+        results,
+        columns=["Model","Accuracy","Precision","Recall","F1-Score"]
+    )
+    st.dataframe(metrics_df.style.background_gradient(cmap="Blues"), use_container_width=True)
+    st.markdown("**Interpretation:** Compare these to pick the best classifier.")
 
-    # Classification feature importance (Random Forest)
-    st.markdown("### Classification Feature Importances (Random Forest)")
-    rf = RandomForestClassifier(random_state=0)
-    rf.fit(Xtr, ytr)
-    imp_df = pd.DataFrame({
-        "Feature": features,
-        "Importance": rf.feature_importances_
-    }).sort_values("Importance", ascending=False)
-    fig_imp_clf = px.bar(imp_df, x="Importance", y="Feature", orientation="h",
-                         title="Random Forest Feature Importances")
-    st.plotly_chart(fig_imp_clf, use_container_width=True)
+    # Feature importances via permutation
+    st.markdown("### Feature Importances")
+    sel_name = st.selectbox("Choose model", list(models.keys()))
+    sel_model = models[sel_name]
+    with st.spinner(f"Computing permutation importances for {sel_name}..."):
+        perm = permutation_importance(
+            sel_model, X_test, y_test,
+            n_repeats=10, random_state=42, n_jobs=-1
+        )
+    imp_df = (
+        pd.DataFrame({
+            "Feature": features,
+            "Importance": perm.importances_mean
+        })
+        .sort_values("Importance", ascending=False)
+    )
+    fig_imp, ax_imp = plt.subplots()
+    sns.barplot(
+        y="Feature", x="Importance",
+        data=imp_df, ax=ax_imp, palette="viridis"
+    )
+    ax_imp.set_title(f"{sel_name} Permutation Importances")
+    st.pyplot(fig_imp)
     st.markdown("""
     **Interpretation:**  
-    Features with higher importance have greater influence on sponsor prediction.
+    Permutation importance measures how shuffling each feature affects model performance.  
+    Larger drops mean the feature is more critical to accurate predictions.
     """)
 
+    # Confusion Matrix
     st.markdown("#### Confusion Matrix")
-    sel = st.selectbox("Model", list(models.keys()))
-    cm = confusion_matrix(yts, models[sel].predict(Xts))
+    cm = confusion_matrix(y_test, sel_model.predict(X_test))
     fig_cm, ax_cm = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", ax=ax_cm,
-                xticklabels=["No","Yes"], yticklabels=["No","Yes"])
+    sns.heatmap(
+        cm, annot=True, fmt='d', cmap='Blues',
+        xticklabels=["No","Yes"], yticklabels=["No","Yes"],
+        ax=ax_cm
+    )
     ax_cm.set_xlabel("Predicted"); ax_cm.set_ylabel("Actual")
     st.pyplot(fig_cm)
-    st.markdown("""
-    **Interpretation:**  
-    - True Positives (bottom-right) are correctly identified sponsors.  
-    - False Positives (top-right) are non-sponsors predicted as sponsors.
-    """)
+    st.markdown("**Interpretation:** TP/TN and FP/FN counts help assess model errors.")
 
+    # ROC Curves
     st.markdown("#### ROC Curves")
     fig_roc, ax_roc = plt.subplots()
     for name, (fpr, tpr, roc_auc) in roc_data.items():
@@ -308,20 +336,21 @@ with tabs[1]:
     ax_roc.set_xlabel("False Positive Rate"); ax_roc.set_ylabel("True Positive Rate")
     ax_roc.legend()
     st.pyplot(fig_roc)
-    st.markdown("**Interpretation:** The closer the curve to the top-left, the better the model.")
+    st.markdown("**Interpretation:** Curves closer to the top-left indicate stronger models.")
 
+    # Upload new data
     st.markdown("#### Predict on New Data")
     up = st.file_uploader("Upload CSV (no target)", type="csv")
     if up:
-        new = pd.read_csv(up)
+        new_df = pd.read_csv(up)
         for col in cat_cols:
             le = LabelEncoder()
-            new[col] = le.fit_transform(new[col].astype(str))
-        new_preds = models[sel].predict(new[features])
-        new["Predicted_Sponsor"] = ["Yes" if p==1 else "No" for p in new_preds]
-        st.dataframe(new)
-        out_csv = new.to_csv(index=False).encode()
-        st.download_button("Download Predictions", out_csv, "predictions.csv", "text/csv")
+            new_df[col] = le.fit_transform(new_df[col].astype(str))
+        new_df["Predicted_Sponsor"] = sel_model.predict(new_df[features])
+        new_df["Predicted_Sponsor"] = new_df["Predicted_Sponsor"].map({1:"Yes",0:"No"})
+        st.dataframe(new_df)
+        csv_out = new_df.to_csv(index=False).encode()
+        st.download_button("Download Predictions", csv_out, "predictions.csv", "text/csv")
         st.markdown("**Interpretation:** Use this to score new leads for sponsorship interest.")
 
 # ========== TAB 3: CLUSTERING ==========
