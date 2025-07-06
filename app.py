@@ -473,11 +473,32 @@ with tabs[4]:
 with tabs[5]:
     st.markdown("## 📝 Final Recommendations")
     st.markdown("""
-    1. **Demographic Targeting:** Focus on ages 25–45 and high-spend outliers.  
-    2. **Premium Upsells:** Promote premium seating to “Yes”/“Maybe” segments.  
-    3. **Operational Fixes:** Improve parking & signage.  
-    4. **Persona Messaging:** Tailor by cluster profiles.  
-    5. **F&B Bundles:** Bundle top food combos & expand niche menus.  
-    6. **Pricing Strategy:** Use regression forecasts for dynamic pricing.  
-    7. **Ongoing Analytics:** Retrain models post-event and monitor key correlations.
+    **1. Demographic Targeting (Data Viz):**  
+    - Prioritize ages 25–45, the core attendee group.  
+    - Tailor high-value offers to outlier spenders.
+
+    **2. Premium Upsells:**  
+    - Offer premium seating to “Yes”/“Maybe” segments—high spend potential.  
+    - Use classification model at signup to identify likely sponsors.
+
+    **3. Operational Wins:**  
+    - Improve parking & signage—top complaints.  
+    - Boost staffing in cities with low satisfaction (Delhi).
+
+    **4. Persona-based Messaging:**  
+    - Cluster 0 (Young Professionals): emphasize networking & tech.  
+    - Cluster 1 (Families): focus on entertainment & comfort.  
+    - Cluster 2 (Academics/Students): highlight knowledge sessions.
+
+    **5. F&B Bundles:**  
+    - Bundle popular combos (e.g., Indian + Quick snacks).  
+    - Expand vegan/gluten-free for ~20% niche demand.
+
+    **6. Pricing & Forecasting:**  
+    - Apply regression forecasts to set dynamic pricing by city/income.  
+    - Monitor model R² quarterly to adjust strategies.
+
+    **7. Ongoing Analytics:**  
+    - Retrain models after major events to capture evolving behavior.  
+    - Track key correlations (income↔spend, satisfaction↔recommendation) continuously.
     """)
