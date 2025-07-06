@@ -73,12 +73,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- MAIN TABS ---
+# Update your tabs declaration to include the new Recommendations tab
 tabs = st.tabs([
     "Data Visualisation",
     "Classification",
     "Clustering",
     "Association Rule Mining",
-    "Regression"
+    "Regression",
+    "Recommendations"
 ])
 
 # ========== TAB 1: DATA VISUALISATION ==========
@@ -405,3 +407,49 @@ with tabs[4]:
         "- Ridge regression and decision tree often yield highest R² on test data.\n"
         "- Luxury spenders appear as outliers and are harder to model accurately."
     )
+
+# ========== TAB 6: RECOMMENDATIONS ==========
+with tabs[5]:
+    st.markdown("## 📝 Final Recommendations")
+    st.markdown("""
+    **Based on the insights from each section:**
+
+    1. **Demographic Targeting (Data Visualisation):**  
+       - Focus marketing on the **25–45** age group, who form the core of attendees.  
+       - Tailor messaging for high-spend outliers (e.g., luxury packages).
+
+    2. **Spending Upsells:**  
+       - Promote **premium seating** and “maybe” group shows good conversion potential.  
+       - Offer tiered pricing bundles (e.g., Event + VIP perks) to increase average spend.
+
+    3. **Networking Events (Classification):**  
+       - Corporate professionals are the most likely to network—create exclusive B2B sessions.  
+       - Use the sponsor/exhibitor classifier to pre-qualify potential partners via your registration form.
+
+    4. **Operational Improvements (Clustering & Pain Points):**  
+       - Address **parking** and **signage** as top infra complaints.  
+       - Optimize staffing in cities with variable satisfaction (e.g., Delhi) to lift scores.
+
+    5. **Food & Beverage Offering (Association Rules):**  
+       - Bundle popular combos: **Indian + Quick snacks**, **Vegan + Continental**, based on rule mining.  
+       - Expand vegan/gluten-free menus to capture niche segments (~15–20% demand).
+
+    6. **Customer Personas (Clustering):**  
+       - Leverage cluster profiles to design personalized communications:  
+         - **Cluster 0:** Young professionals—emphasize networking & tech.  
+         - **Cluster 1:** Families—focus on entertainment & comfort.  
+         - **Cluster 2:** Academics—highlight speaking sessions & learning.
+
+    7. **Pricing & Forecasting (Regression):**  
+       - Use your regression models to forecast event spend by income and satisfaction levels.  
+       - Adjust pricing thresholds in cities with lower R² performance to reduce outlier risk.
+
+    8. **Ongoing Analytics:**  
+       - Monitor correlation drivers (income ↔ spend, satisfaction ↔ recommendation) each quarter.  
+       - Retrain classification/clustering models after each major event to capture evolving behaviors.
+
+    **Next Steps:**  
+    - Implement targeted email campaigns for each persona.  
+    - A/B test premium upsell messaging.  
+    - Schedule quarterly reviews of key metrics and refine strategies accordingly.
+    """)
