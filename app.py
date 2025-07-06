@@ -4,11 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, roc_curve, auc, classification_report
+    confusion_matrix, roc_curve, auc
 )
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
@@ -19,13 +20,19 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from mlxtend.frequent_patterns import apriori, association_rules
 
-import io
+import warnings
+warnings.filterwarnings("ignore")
 
-# Set page config
+# --- Streamlit Page Setup ---
 st.set_page_config(page_title="Jio World Centre Analytics Dashboard", page_icon=":bar_chart:", layout="wide")
 
 # === SIDEBAR ===
-st.sidebar.image("data/logo_jwc.png", width=180)
+logo_path = "data/logo_jwc.png"
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, width=180)
+else:
+    st.sidebar.info("Logo not found. Please add 'logo_jwc.png' in 'data/' folder.")
+
 st.sidebar.title("Jio World Centre Dashboard")
 theme = st.sidebar.selectbox("Choose Theme", ["Light", "Dark"])
 if theme == "Dark":
@@ -38,8 +45,7 @@ if theme == "Dark":
 # --- Load data ---
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/JioWorldCentre_Survey_Synthetic.csv")
-    return df
+    return pd.read_csv("data/JioWorldCentre_Survey_Synthetic.csv")
 
 df = load_data()
 
@@ -51,19 +57,13 @@ st.markdown("""
 st.markdown("""
 <div style='background:#ffe5b4; border-radius:10px; padding:18px; border: 1px solid #e3b05a'>
 <b>Executive Summary:</b><br>
-Welcome to the analytics platform for the Jio World Centre, Mumbai. This dashboard provides a deep dive into real-world event consumer behaviour, preferences, and business opportunities using state-of-the-art machine learning and data mining techniques.
-<br><br>
-<b>Key Features:</b>
-<ul>
-  <li>Explore complex, actionable insights into consumer personas, event trends, and spending patterns.</li>
-  <li>Classify customer willingness and segment event visitors using advanced ML models.</li>
-  <li>Identify customer personas and opportunities with clustering and association rule mining.</li>
-  <li>Test and predict outcomes on new datasets, with interactive upload and download features.</li>
-</ul>
+This dashboard analyzes the event consumer dataset from Jio World Centre, Mumbai using advanced ML, clustering, regression, and association rule mining. Explore visitor personas, spend, event preferences, satisfaction, and new business opportunities.<br>
+- Data is fully synthetic but mimics real urban Indian event-goer sentiment, with outliers and realistic bias/skew.
+- Use the tabs for interactive analytics, classification, clustering, association mining, and regression.
 </div>
 """, unsafe_allow_html=True)
 
-# --- Main Tabs ---
+# --- Tabs ---
 tabs = st.tabs([
     "Data Visualisation",
     "Classification",
@@ -76,7 +76,6 @@ tabs = st.tabs([
 with tabs[0]:
     st.markdown("## :bar_chart: Data Visualisation & Insights")
 
-    # Filter Section
     with st.expander("**Filter Data**", expanded=False):
         gender = st.multiselect("Gender", options=df["Gender"].unique(), default=list(df["Gender"].unique()))
         city = st.multiselect("City", options=df["City"].unique(), default=list(df["City"].unique()))
@@ -171,7 +170,6 @@ with tabs[1]:
     clf_df = df.copy()
     clf_df['Sponsor_Label'] = (clf_df['SponsorOrExhibitorInterest']=='Yes').astype(int)
     features = ["Age","MonthlyIncomeINR","EventsAttendedAnnually","SpendPerVisitINR","MaxFoodSpendINR","OverallSatisfaction"]
-    # Add a few categorical encodings
     cat_features = ['Gender','Education','Occupation','PreferredEventType']
     for col in cat_features:
         le = LabelEncoder()
@@ -181,7 +179,6 @@ with tabs[1]:
     y = clf_df['Sponsor_Label']
     X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.25, random_state=42)
 
-    # Model options
     classifiers = {
         'K-Nearest Neighbors': KNeighborsClassifier(),
         'Decision Tree': DecisionTreeClassifier(random_state=0),
@@ -199,7 +196,6 @@ with tabs[1]:
         rec = recall_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred)
         results.append([name, acc, prec, rec, f1])
-        # For ROC
         if hasattr(clf, "predict_proba"):
             y_score = clf.predict_proba(X_test)[:,1]
         else:
@@ -211,7 +207,6 @@ with tabs[1]:
     st.dataframe(res_df.style.background_gradient(cmap='YlGnBu'), use_container_width=True)
     st.caption("Shows key metrics on the test data for each algorithm. Compare to select best performer.")
 
-    # Confusion matrix toggle
     st.markdown("#### Confusion Matrix")
     selected_model = st.selectbox("Select model for Confusion Matrix", list(classifiers.keys()))
     model = classifiers[selected_model]
@@ -224,7 +219,6 @@ with tabs[1]:
     st.pyplot(fig_cm)
     st.caption("**How to interpret:** True Positive/Negative and False Positive/Negative counts shown.")
 
-    # ROC Curve
     st.markdown("#### ROC Curve (All Models)")
     fig_roc, ax_roc = plt.subplots()
     for name, (fpr, tpr, roc_auc) in roc_data.items():
@@ -236,7 +230,6 @@ with tabs[1]:
     st.pyplot(fig_roc)
     st.caption("**How to interpret:** Higher curve = better model. Area under curve (AUC) closer to 1 is preferred.")
 
-    # Upload new data for prediction
     st.markdown("#### Predict on New Uploaded Data")
     uploaded_file = st.file_uploader("Upload new customer CSV (no target variable)", type="csv")
     if uploaded_file:
@@ -263,7 +256,6 @@ with tabs[2]:
     cluster_labels = kmeans.fit_predict(clust_data)
     clust_df['Cluster'] = cluster_labels
 
-    # Elbow Chart
     inertia = []
     for c in range(2, 11):
         km = KMeans(n_clusters=c, random_state=42, n_init=10)
@@ -274,7 +266,6 @@ with tabs[2]:
     st.plotly_chart(fig_elbow)
     st.caption("**How to interpret:** The 'elbow' point is a good choice for k.")
 
-    # Silhouette Score Chart
     sil_scores = []
     for c in range(2, 11):
         km = KMeans(n_clusters=c, random_state=42, n_init=10)
@@ -285,13 +276,11 @@ with tabs[2]:
     st.plotly_chart(fig_sil)
     st.caption("**How to interpret:** Higher silhouette score = better-defined clusters.")
 
-    # Persona Table
     st.markdown("#### Cluster Personas")
     persona = clust_df.groupby('Cluster')[num_cols].mean().round(1)
     st.dataframe(persona.style.background_gradient(cmap="BuGn"), use_container_width=True)
     st.caption("Each row summarizes the average profile for customers in that cluster.")
 
-    # Download cluster-labeled data
     csv_clust = clust_df.to_csv(index=False).encode()
     st.download_button("Download Data with Cluster Labels", csv_clust, "Clustered_Data.csv", "text/csv")
 
@@ -300,22 +289,18 @@ with tabs[3]:
     st.markdown("## :bulb: Association Rule Mining (Apriori)")
 
     st.markdown("### Choose Columns for Association Rule Mining")
-    # Only columns with comma-separated values
     assoc_cols = ['FoodPreferences', 'ChallengesFaced']
     selected_col = st.selectbox("Select column", assoc_cols)
     min_support = st.slider("Minimum Support", 0.01, 0.5, 0.05, 0.01)
     min_conf = st.slider("Minimum Confidence", 0.1, 1.0, 0.3, 0.05)
 
-    # Transaction DataFrame
     assoc_df = df[selected_col].str.get_dummies(sep=',')
     freq_items = apriori(assoc_df, min_support=min_support, use_colnames=True)
     rules = association_rules(freq_items, metric="confidence", min_threshold=min_conf)
     rules = rules.sort_values("confidence", ascending=False).head(10)
     st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
     st.caption(f"Showing top 10 association rules for {selected_col} (filtered by support/confidence).")
-    st.markdown("""
-        **How to interpret:** If {antecedents} is observed, then {consequents} is likely, with confidence/lift shown.
-    """)
+    st.markdown("**How to interpret:** If {antecedents} is observed, then {consequents} is likely, with confidence/lift shown.")
 
 # ========== TAB 5: REGRESSION ==========
 with tabs[4]:
@@ -326,7 +311,6 @@ with tabs[4]:
     reg_targets = ['SpendPerVisitINR', 'MaxFoodSpendINR', 'OverallSatisfaction']
     input_features = ['Age','MonthlyIncomeINR','EventsAttendedAnnually','OverallSatisfaction']
 
-    # Results Table
     reg_results = []
     regressors = {
         "Linear": LinearRegression(),
@@ -347,7 +331,6 @@ with tabs[4]:
     st.dataframe(reg_resdf.pivot(index="Regressor", columns="Target", values="Test R^2"))
     st.caption("Shows how well each regression model predicts each target variable.")
 
-    # Chart example: Actual vs Predicted for best model/target
     st.markdown("#### Actual vs. Predicted Spend (Linear Regression)")
     y = reg_df["SpendPerVisitINR"]
     X = reg_df[input_features]
@@ -362,12 +345,9 @@ with tabs[4]:
     st.pyplot(fig_reg)
     st.caption("**How to interpret:** Points near the red line indicate accurate predictions.")
 
-    # Insights
     st.markdown("#### Regression Insights")
     st.write("""
     - **Income and satisfaction** are strong predictors of spend and food spend.
     - Decision Tree and Ridge often provide the highest R² for spend prediction.
     - Some outliers are not well predicted—possibly due to rare luxury spenders.
     """)
-
-# END OF APP
