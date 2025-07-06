@@ -31,11 +31,8 @@ st.set_page_config(
 )
 
 # --- DISPLAY LOGO AT TOP ---
-logo_url = (
-    "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/"
-    "data/logo_jwc.png"
-)
-st.image(logo_url, width=250)
+# right at the top of app.py, after page config
+st.image("data/logo_jwc.png", width=250)
 
 # --- LOAD DATA WITH GITHUB FALLBACK ---
 @st.cache_data
