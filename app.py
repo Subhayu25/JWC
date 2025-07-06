@@ -30,26 +30,30 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- DISPLAY LOCAL LOGO AT TOP ---
-logo_path = "data/logo_JWC.png"
-if os.path.exists(logo_path):
-    st.image(logo_path, width=250)
-else:
-    st.error(f"Logo not found at {logo_path}. Please add your logo there.")
+# --- DISPLAY LOGO AT TOP ---
+logo_url = (
+    "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/"
+    "data/logo_jwc.png"
+)
+st.image(logo_url, width=250)
 
-# --- LOAD DATA LOCALLY ---
+# --- LOAD DATA WITH GITHUB FALLBACK ---
 @st.cache_data
 def load_data():
-    csv_path = "data/JioWorldCentre_Survey_Synthetic.csv"
-    if os.path.exists(csv_path):
-        return pd.read_csv(csv_path)
-    else:
-        st.error(f"CSV data not found at {csv_path}. Please add the dataset there.")
-        st.stop()
+    for p in ["data/JioWorldCentre_Survey_Synthetic.csv", "JioWorldCentre_Survey_Synthetic.csv"]:
+        if os.path.exists(p):
+            return pd.read_csv(p)
+    github_url = (
+        "https://raw.githubusercontent.com/USERNAME/REPO/BRANCH/"
+        "data/JioWorldCentre_Survey_Synthetic.csv"
+    )
+    df = pd.read_csv(github_url)
+    st.sidebar.success("Loaded dataset from GitHub")
+    return df
 
 df = load_data()
 
-# --- SIDEBAR THEME SELECTION ---
+# --- SIDEBAR THEME ---
 st.sidebar.title("Settings")
 theme = st.sidebar.selectbox("Choose Theme", ["Light", "Dark"])
 if theme == "Dark":
@@ -69,6 +73,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- MAIN TABS ---
+# Update your tabs declaration to include the new Recommendations tab
 tabs = st.tabs([
     "Data Visualisation",
     "Classification",
@@ -97,7 +102,7 @@ with tabs[0]:
         st.caption(f"**{len(df_viz)} responses filtered**")
         st.markdown("*Use these filters to narrow down the segment of attendees based on demographic and event preferences.*")
 
-    # Key Metrics
+    # Metrics
     c1, c2, c3 = st.columns(3)
     with c1:
         st.metric("Median Spend/Visit (INR)", f"{int(df_viz.SpendPerVisitINR.median()):,}")
@@ -111,12 +116,13 @@ with tabs[0]:
     st.markdown("### 1. Age Distribution")
     fig1, ax1 = plt.subplots()
     sns.histplot(df_viz.Age, bins=20, kde=True, ax=ax1, color="#4C72B0")
-    ax1.set_xlabel("Age"); ax1.set_ylabel("Count")
+    ax1.set_xlabel("Age")
+    ax1.set_ylabel("Count")
     st.pyplot(fig1)
     st.markdown("""
     **Interpretation:**  
-    - Majority of attendees are aged 25–45.  
-    - A clear peak around 35 suggests targeted campaigns for this demographic.
+    - The distribution shows the majority of attendees are between 25–45 years old.  
+    - The smooth KDE curve highlights a slight peak around age 35, suggesting marketing efforts can focus on this age group.
     """)
 
     # 2. Spend per Visit by City & Event Type
@@ -126,30 +132,30 @@ with tabs[0]:
     st.plotly_chart(fig2, use_container_width=True)
     st.markdown("""
     **Interpretation:**  
-    - Mumbai and Delhi attendees show higher and more variable spend.  
-    - Conferences generally drive higher spend than other event types.
+    - Mumbai and Delhi show wider spend ranges, including high-value outliers.  
+    - Conferences tend to have higher median spend, while performances cluster at lower spend levels.
     """)
 
     # 3. Occupation vs. Networking Interest
     st.markdown("### 3. Occupation vs. Networking Interest")
     occ_net = pd.crosstab(df_viz.Occupation, df_viz.NetworkingInterest)
-    fig3 = px.bar(occ_net, barmode='group', labels={'value':'Count'})
+    fig3 = px.bar(occ_net, barmode='group', labels={'value':'Count','Occupation':'Occupation','NetworkingInterest':'Interested'})
     st.plotly_chart(fig3, use_container_width=True)
     st.markdown("""
     **Interpretation:**  
-    - Corporate attendees lead in networking interest, indicating B2B session potential.  
-    - Students and artists show lower participation in networking.
+    - Corporate attendees show the highest interest in networking sessions.  
+    - Students and artists are less likely to participate, which can guide targeted networking event promotions.
     """)
 
-    # 4. Attendance Frequency
+    # 4. Event Attendance Frequency
     st.markdown("### 4. Event Attendance Frequency")
     fig4 = px.pie(df_viz, names="ParticipationFrequency", title="Attendance Frequency")
     fig4.update_traces(textinfo='percent+label')
     st.plotly_chart(fig4)
     st.markdown("""
     **Interpretation:**  
-    - ~40% attend annually, revealing many one-time visitors.  
-    - Quarterly attendees (~25%) represent a core loyal segment.
+    - Nearly 40% attend annually, indicating many first-time or infrequent visitors.  
+    - A quarter attend quarterly, representing a loyal base to engage further.
     """)
 
     # 5. Food Preferences
@@ -160,22 +166,22 @@ with tabs[0]:
     st.plotly_chart(fig5, use_container_width=True)
     st.markdown("""
     **Interpretation:**  
-    - Indian cuisine is most popular, followed by Continental and Asian.  
-    - Niche diets (vegan, gluten-free) show ~15–20% demand.
+    - Indian cuisine dominates, followed by Continental and Asian.  
+    - Vegan and gluten-free options have lower but significant demand (~15–20%).
     """)
 
     # 6. Premium Seating vs. Spend
     st.markdown("### 6. Premium Seating Interest vs. Spend")
     fig6 = px.box(df_viz, x="PremiumSeatingInterest", y="SpendPerVisitINR", color="PremiumSeatingInterest")
-    fig6.update_layout(xaxis_title="Premium Interest", yaxis_title="Spend (INR)")
+    fig6.update_layout(xaxis_title="Premium Seating Interest", yaxis_title="Spend per Visit (INR)")
     st.plotly_chart(fig6, use_container_width=True)
     st.markdown("""
     **Interpretation:**  
-    - “Yes” respondents spend significantly more, validating premium upsell.  
-    - The “Maybe” group shows potential for conversion with targeted offers.
+    - Those who answered "Yes" have a higher median and upper quartile spend, suggesting premium seating is a valuable upsell.  
+    - "Maybe" group shows varied spend, indicating potential conversion opportunities.
     """)
 
-    # 7. Challenges Faced
+    # 7. Challenges Faced at Events
     st.markdown("### 7. Challenges Faced at Events")
     chall_counts = df_viz.ChallengesFaced.str.get_dummies(sep=',').sum().sort_values(ascending=False)
     fig7 = px.bar(chall_counts, labels={'value':'Count','index':'Challenge'})
@@ -183,19 +189,19 @@ with tabs[0]:
     st.plotly_chart(fig7, use_container_width=True)
     st.markdown("""
     **Interpretation:**  
-    - Parking and signage top the list of attendee pain points.  
-    - Addressing these can improve overall experience.
+    - Parking and signage are the top complaints, indicating immediate operational improvements.  
+    - Food quality and tech issues appear less frequently but still notable.
     """)
 
-    # 8. Satisfaction by City
+    # 8. Overall Satisfaction by City
     st.markdown("### 8. Overall Satisfaction by City")
     fig8 = px.box(df_viz, x="City", y="OverallSatisfaction", color="City")
-    fig8.update_layout(xaxis_title="City", yaxis_title="Satisfaction Score")
+    fig8.update_layout(xaxis_title="City", yaxis_title="Satisfaction (1–10)")
     st.plotly_chart(fig8, use_container_width=True)
     st.markdown("""
     **Interpretation:**  
-    - Consistent high satisfaction in Pune/Mumbai.  
-    - Greater variability in Delhi suggests targeted improvements.
+    - Pune and Mumbai have tighter satisfaction distributions around 8–9.  
+    - Delhi shows more variability, suggesting some events underperform attendee expectations.
     """)
 
     # 9. Correlation Heatmap
@@ -211,15 +217,15 @@ with tabs[0]:
     st.pyplot(fig9)
     st.markdown("""
     **Interpretation:**  
-    - Income correlates moderately with spend (~0.45).  
-    - Satisfaction correlates strongly with recommendation (~0.72).
+    - Monthly income correlates moderately with spend (~0.45).  
+    - Satisfaction and recommendation likelihood are strongly correlated (~0.72), confirming NPS logic.
     """)
 
     # 10. Download Filtered Data
     st.markdown("### 10. Download Filtered Data")
     csv_data = df_viz.to_csv(index=False).encode()
     st.download_button("Download CSV", csv_data, "filtered_data.csv", "text/csv")
-    st.markdown("*Download the filtered dataset for deeper offline analysis.*")
+    st.markdown("*Click to download the filtered dataset for offline analysis.*")
 
 # ========== TAB 2: CLASSIFICATION ==========
 with tabs[1]:
@@ -265,7 +271,7 @@ with tabs[1]:
 
     res_df = pd.DataFrame(results, columns=["Model","Accuracy","Precision","Recall","F1-Score"])
     st.dataframe(res_df.style.background_gradient(cmap="Blues"), use_container_width=True)
-    st.markdown("**Interpretation:** Compare metrics to select the best model for predicting sponsor interest.")
+    st.markdown("**Interpretation:** Compare metrics to choose the best model for predicting sponsor interest.")
 
     st.markdown("#### Confusion Matrix")
     sel = st.selectbox("Model", list(models.keys()))
@@ -277,8 +283,8 @@ with tabs[1]:
     st.pyplot(fig_cm)
     st.markdown("""
     **Interpretation:**  
-    - True Positives (bottom-right) are correctly identified sponsors.  
-    - False Positives (top-right) are non-sponsors predicted as sponsors.
+    - True positives (bottom-right) are correctly predicted sponsors.  
+    - False positives (top-right) indicate non-sponsors predicted as sponsors.
     """)
 
     st.markdown("#### ROC Curves")
@@ -303,7 +309,7 @@ with tabs[1]:
         st.dataframe(new)
         out_csv = new.to_csv(index=False).encode()
         st.download_button("Download Predictions", out_csv, "predictions.csv", "text/csv")
-        st.markdown("**Interpretation:** Score new leads for sponsorship interest.")
+        st.markdown("**Interpretation:** Use this to score new leads for sponsorship interest.")
 
 # ========== TAB 3: CLUSTERING ==========
 with tabs[2]:
@@ -329,16 +335,16 @@ with tabs[2]:
 
     fig_elb = px.line(x=list(range(2,11)), y=inertias, markers=True, title="Elbow Method")
     st.plotly_chart(fig_elb)
-    st.markdown("**Interpretation:** The 'elbow' point suggests optimal k where adding more clusters yields diminishing returns.")
+    st.markdown("**Interpretation:** The 'elbow' point suggests an optimal k where adding more clusters yields diminishing returns.")
 
     fig_sil = px.line(x=list(range(2,11)), y=sils, markers=True, title="Silhouette Scores")
     st.plotly_chart(fig_sil)
-    st.markdown("**Interpretation:** Higher silhouette scores indicate well-defined clusters.")
+    st.markdown("**Interpretation:** Higher silhouette scores indicate well-separated, dense clusters.")
 
     st.markdown("#### Cluster Personas")
     persona = cdf.groupby("Cluster")[num_feats].mean().round(1)
     st.dataframe(persona, use_container_width=True)
-    st.markdown("**Interpretation:** Each row shows the average profile for that cluster, guiding personalized outreach.")
+    st.markdown("**Interpretation:** Each row is the average profile for that cluster, guiding personalized marketing.")
 
     dl_csv = cdf.to_csv(index=False).encode()
     st.download_button("Download Clustered Data", dl_csv, "clustered_data.csv", "text/csv")
@@ -356,8 +362,8 @@ with tabs[3]:
     st.dataframe(rules[['antecedents','consequents','support','confidence','lift']])
     st.markdown("""
     **Interpretation:**  
-    - Antecedents → Consequents: if the antecedents occur, the consequents are likely.  
-    - Support indicates frequency; confidence indicates reliability; lift shows strength above random chance.
+    - Antecedents → Consequents: if the antecedents occur, consequents are likely.  
+    - Support indicates frequency; confidence indicates reliability; lift indicates strength above chance.
     """)
 
 # ========== TAB 5: REGRESSION ==========
@@ -384,7 +390,7 @@ with tabs[4]:
         index="Model", columns="Target", values="R2", aggfunc="first"
     )
     st.dataframe(reg_df, use_container_width=True)
-    st.markdown("**Interpretation:** R² shows how well each model explains variance in the target.")
+    st.markdown("**Interpretation:** R² indicates how much variance in the target is explained by the features.")
 
     lin = LinearRegression().fit(Xtr, ytr)
     preds = lin.predict(Xts)
@@ -393,50 +399,57 @@ with tabs[4]:
     ax_reg.plot([yts.min(), yts.max()], [yts.min(), yts.max()], 'r--')
     ax_reg.set_xlabel("Actual Spend"); ax_reg.set_ylabel("Predicted Spend")
     st.pyplot(fig_reg)
-    st.markdown("**Interpretation:** Points close to the red line indicate accurate predictions; outliers highlight prediction errors.")
+    st.markdown("**Interpretation:** Points close to the red line indicate accurate predictions; deviations highlight outliers.")
 
     st.markdown("#### Key Takeaways")
     st.write(
-        "- Income & satisfaction strongly predict spend.\n"
-        "- Ridge & Decision Tree often yield highest R².\n"
-        "- Luxury spenders (outliers) remain challenging to model."
+        "- Income & satisfaction are strong predictors of event spend.\n"
+        "- Ridge regression and decision tree often yield highest R² on test data.\n"
+        "- Luxury spenders appear as outliers and are harder to model accurately."
     )
 
 # ========== TAB 6: RECOMMENDATIONS ==========
 with tabs[5]:
     st.markdown("## 📝 Final Recommendations")
     st.markdown("""
-    **1. Demographic Targeting (Data Viz):**  
-    - Prioritize marketing to ages 25–45, who dominate attendance.  
-    - Craft messaging for high-spend outliers to boost premium package sales.
+    **Based on the insights from each section:**
 
-    **2. Premium Upsells (Data Viz & Classification):**  
-    - Promote premium seating to “Yes” and “Maybe” groups—they show higher spend.  
-    - Use the classification model on registration data to pre-qualify sponsor/exhibitor leads.
+    1. **Demographic Targeting (Data Visualisation):**  
+       - Focus marketing on the **25–45** age group, who form the core of attendees.  
+       - Tailor messaging for high-spend outliers (e.g., luxury packages).
 
-    **3. Operational Improvements (Data Viz & Clustering):**  
-    - Improve parking and signage—top pain points from survey.  
-    - Re-deploy staff in cities with variable satisfaction (e.g., Delhi) to elevate experience.
+    2. **Spending Upsells:**  
+       - Promote **premium seating** and “maybe” group shows good conversion potential.  
+       - Offer tiered pricing bundles (e.g., Event + VIP perks) to increase average spend.
 
-    **4. Persona-Based Engagement (Clustering):**  
-    - Cluster 0 (Young Professionals): Emphasize networking & technology features.  
-    - Cluster 1 (Families): Highlight entertainment, seating comfort, and child-friendly amenities.  
-    - Cluster 2 (Academics/Students): Focus on knowledge sessions and affordable options.
+    3. **Networking Events (Classification):**  
+       - Corporate professionals are the most likely to network—create exclusive B2B sessions.  
+       - Use the sponsor/exhibitor classifier to pre-qualify potential partners via your registration form.
 
-    **5. Food & F&B Bundles (Association Rules):**  
-    - Bundle popular combos (e.g., Indian + Quick snacks).  
-    - Expand vegan/gluten-free offerings to capture ~15–20% niche demand.
+    4. **Operational Improvements (Clustering & Pain Points):**  
+       - Address **parking** and **signage** as top infra complaints.  
+       - Optimize staffing in cities with variable satisfaction (e.g., Delhi) to lift scores.
 
-    **6. Pricing Strategy (Regression):**  
-    - Leverage R² insights to forecast spend by income/satisfaction.  
-    - Adjust price tiers in cities with lower predictability to manage revenue risk.
+    5. **Food & Beverage Offering (Association Rules):**  
+       - Bundle popular combos: **Indian + Quick snacks**, **Vegan + Continental**, based on rule mining.  
+       - Expand vegan/gluten-free menus to capture niche segments (~15–20% demand).
 
-    **7. Continuous Monitoring:**  
-    - Quarterly retraining of models to capture evolving attendee behavior.  
-    - Track key correlations (income↔spend, satisfaction↔recommendation) post-event.
+    6. **Customer Personas (Clustering):**  
+       - Leverage cluster profiles to design personalized communications:  
+         - **Cluster 0:** Young professionals—emphasize networking & tech.  
+         - **Cluster 1:** Families—focus on entertainment & comfort.  
+         - **Cluster 2:** Academics—highlight speaking sessions & learning.
+
+    7. **Pricing & Forecasting (Regression):**  
+       - Use your regression models to forecast event spend by income and satisfaction levels.  
+       - Adjust pricing thresholds in cities with lower R² performance to reduce outlier risk.
+
+    8. **Ongoing Analytics:**  
+       - Monitor correlation drivers (income ↔ spend, satisfaction ↔ recommendation) each quarter.  
+       - Retrain classification/clustering models after each major event to capture evolving behaviors.
 
     **Next Steps:**  
-    - Deploy targeted email campaigns per persona.  
-    - A/B test premium seating upsell messages.  
-    - Schedule regular analytics reviews and refine strategies accordingly.
+    - Implement targeted email campaigns for each persona.  
+    - A/B test premium upsell messaging.  
+    - Schedule quarterly reviews of key metrics and refine strategies accordingly.
     """)
