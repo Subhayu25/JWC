@@ -26,14 +26,22 @@ warnings.filterwarnings("ignore")
 # --- Streamlit Page Setup ---
 st.set_page_config(page_title="Jio World Centre Analytics Dashboard", page_icon=":bar_chart:", layout="wide")
 
-# === SIDEBAR ===
-logo_path = "data/logo_jwc.png"
-if os.path.exists(logo_path):
-    st.sidebar.image(logo_path, width=180)
-else:
-    st.sidebar.info("Logo not found. Please add 'logo_jwc.png' in 'data/' folder.")
-
+# === SIDEBAR WITH LOGO UPLOAD OPTION ===
 st.sidebar.title("Jio World Centre Dashboard")
+
+uploaded_logo = st.sidebar.file_uploader(
+    "Upload Logo (PNG/JPG)", 
+    type=["png", "jpg", "jpeg"], 
+    help="Upload a logo for this session (optional)"
+)
+
+if uploaded_logo:
+    st.sidebar.image(uploaded_logo, width=180)
+elif os.path.exists("data/logo_jwc.png"):
+    st.sidebar.image("data/logo_jwc.png", width=180)
+else:
+    st.sidebar.info("No logo uploaded. Please upload a logo or add 'logo_jwc.png' to the data folder.")
+
 theme = st.sidebar.selectbox("Choose Theme", ["Light", "Dark"])
 if theme == "Dark":
     st.markdown("""
