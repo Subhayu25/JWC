@@ -380,4 +380,108 @@ with tabs[3]:
     st.markdown("## :bulb: Association Rule Mining")
     cols = ['FoodPreferences','ChallengesFaced']
     selc = st.selectbox("Select column", cols)
-    ms = st.slider("Min Support", 0.01, 0.5,
+    ms = st.slider("Min Support", 0.01, 0.5, 0.05, 0.01)
+    mc = st.slider("Min Confidence", 0.1, 1.0, 0.3, 0.05)
+    td = df[selc].str.get_dummies(sep=',')
+    freq = apriori(td, min_support=ms, use_colnames=True)
+    rules = association_rules(freq, metric="confidence", min_threshold=mc).sort_values("confidence", ascending=False).head(10)
+    st.dataframe(rules[['antecedents','consequents','support','confidence','lift']])
+    st.markdown("""
+    **Interpretation:**  
+    - Antecedents → Consequents: if the antecedents occur, consequents are likely.  
+    - Support indicates frequency; confidence indicates reliability; lift indicates strength above chance.
+    """)
+
+# ========== TAB 5: REGRESSION ==========
+with tabs[4]:
+    st.markdown("## :chart_with_upwards_trend: Regression Insights")
+    targets = ['SpendPerVisitINR','MaxFoodSpendINR','OverallSatisfaction']
+    feats = ['Age','MonthlyIncomeINR','EventsAttendedAnnually','OverallSatisfaction']
+    regs = {
+        "Linear": LinearRegression(),
+        "Ridge": Ridge(),
+        "Lasso": Lasso(),
+        "Decision Tree": DecisionTreeRegressor(random_state=0)
+    }
+    results = []
+    for t in targets:
+        y = df[t]; X = df[feats]
+        Xtr, Xts, ytr, yts = train_test_split(X, y, test_size=0.2, random_state=42)
+        for name, model in regs.items():
+            model.fit(Xtr, ytr)
+            r2 = model.score(Xts, yts)
+            results.append([name, t, round(r2, 3)])
+
+    reg_df = pd.DataFrame(results, columns=["Model","Target","R2"]).pivot_table(
+        index="Model", columns="Target", values="R2", aggfunc="first"
+    )
+    st.dataframe(reg_df, use_container_width=True)
+    st.markdown("**Interpretation:** R² indicates how much variance in the target is explained by the features.")
+
+    # Regression feature importance (Decision Tree)
+    st.markdown("### Regression Feature Importances (Decision Tree for SpendPerVisitINR)")
+    X_spend = df[feats]; y_spend = df["SpendPerVisitINR"]
+    Xtr_s, Xts_s, ytr_s, yts_s = train_test_split(X_spend, y_spend, test_size=0.2, random_state=42)
+    dt_spend = DecisionTreeRegressor(random_state=0).fit(Xtr_s, ytr_s)
+    imp_spend = pd.DataFrame({
+        "Feature": feats,
+        "Importance": dt_spend.feature_importances_
+    }).sort_values("Importance", ascending=False)
+    fig_imp_reg = px.bar(imp_spend, x="Importance", y="Feature", orientation="h",
+                         title="Decision Tree Feature Importances")
+    st.plotly_chart(fig_imp_reg, use_container_width=True)
+    st.markdown("""
+    **Interpretation:**  
+    Features with larger importance contribute more to predicting spend per visit.
+    """)
+
+    # Actual vs. Predicted (Linear)
+    lin = LinearRegression().fit(Xtr_s, ytr_s)
+    preds = lin.predict(Xts_s)
+    fig_reg, ax_reg = plt.subplots()
+    ax_reg.scatter(yts_s, preds, alpha=0.5)
+    ax_reg.plot([yts_s.min(), yts_s.max()], [yts_s.min(), yts_s.max()], 'r--')
+    ax_reg.set_xlabel("Actual Spend"); ax_reg.set_ylabel("Predicted Spend")
+    st.pyplot(fig_reg)
+    st.markdown("**Interpretation:** Points close to the red line indicate accurate predictions; outliers highlight errors.")
+
+    st.markdown("#### Key Takeaways")
+    st.write(
+        "- Income & satisfaction are strong predictors of event spend.\n"
+        "- Ridge regression and decision tree often yield highest test R².\n"
+        "- Luxury spenders (outliers) remain challenging to model accurately."
+    )
+
+# ========== TAB 6: RECOMMENDATIONS ==========
+with tabs[5]:
+    st.markdown("## 📝 Final Recommendations")
+    st.markdown("""
+    **1. Demographic Targeting (Data Viz):**  
+    - Prioritize ages 25–45, the core attendee group.  
+    - Tailor high-value offers to outlier spenders.
+
+    **2. Premium Upsells:**  
+    - Offer premium seating to “Yes”/“Maybe” segments—high spend potential.  
+    - Use classification model at signup to identify likely sponsors.
+
+    **3. Operational Wins:**  
+    - Improve parking & signage—top complaints.  
+    - Boost staffing in cities with low satisfaction (Delhi).
+
+    **4. Persona-based Messaging:**  
+    - Cluster 0 (Young Professionals): emphasize networking & tech.  
+    - Cluster 1 (Families): focus on entertainment & comfort.  
+    - Cluster 2 (Academics/Students): highlight knowledge sessions.
+
+    **5. F&B Bundles:**  
+    - Bundle popular combos (e.g., Indian + Quick snacks).  
+    - Expand vegan/gluten-free for ~20% niche demand.
+
+    **6. Pricing & Forecasting:**  
+    - Apply regression forecasts to set dynamic pricing by city/income.  
+    - Monitor model R² quarterly to adjust strategies.
+
+    **7. Ongoing Analytics:**  
+    - Retrain models after major events to capture evolving behavior.  
+    - Track key correlations (income↔spend, satisfaction↔recommendation) continuously.
+    """)
