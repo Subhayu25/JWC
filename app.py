@@ -37,12 +37,10 @@ st.set_page_config(
 logo_path = "data/logo_JWC.png"
 github_logo_url = "https://github.com/Subhayu25/JWC/blob/8f4f29b0abc9b332e00072750aff88470ea8a4cf/logo_jwc.png"
 
-try:
-    if logo_path.exists():
+if logo_path.exists():
     logo_img = Image.open(logo_path)
-    # adjust width to taste
     st.image(logo_img, width=200)
-    else:
+else:
     st.warning(f"⚠️ Logo not found at {logo_path}")
 
 # --- LOAD DATA LOCALLY OR FROM GITHUB RAW ---
