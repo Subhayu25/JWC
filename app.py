@@ -33,7 +33,7 @@ st.set_page_config(
 
 # --- DISPLAY LOGO AT TOP (Local or from GitHub raw) ---
 logo_path = "data/logo_JWC.png"
-github_logo_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/logo_JWC.png"
+github_logo_url = "https://github.com/Subhayu25/JWC/blob/8f4f29b0abc9b332e00072750aff88470ea8a4cf/logo_jwc.png"
 
 try:
     if os.path.exists(logo_path):
