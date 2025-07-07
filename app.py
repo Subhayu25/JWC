@@ -42,7 +42,7 @@ try:
     logo_img = Image.open(logo_path)
     # adjust width to taste
     st.image(logo_img, width=200)
-else:
+    else:
     st.warning(f"⚠️ Logo not found at {logo_path}")
 
 # --- LOAD DATA LOCALLY OR FROM GITHUB RAW ---
