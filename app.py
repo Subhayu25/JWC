@@ -31,21 +31,30 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- DISPLAY LOGO AT TOP ---
+# --- DISPLAY LOGO AT TOP (Local or from GitHub raw) ---
 logo_path = "data/logo_JWC.png"
-if os.path.exists(logo_path):
-    st.image(logo_path, width=250)
-else:
-    st.error(f"Logo not found at {logo_path}. Please add your logo there.")
+github_logo_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/logo_JWC.png"
 
-# --- LOAD DATA LOCALLY ---
+try:
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=250)
+    else:
+        st.image(github_logo_url, width=250)
+except Exception as e:
+    st.warning("Logo not found locally or on GitHub.")
+
+# --- LOAD DATA LOCALLY OR FROM GITHUB RAW ---
 @st.cache_data
 def load_data():
-    csv_path = "data/JioWorldCentre_Survey_Synthetic.csv"
-    if os.path.exists(csv_path):
-        return pd.read_csv(csv_path)
-    else:
-        st.error(f"CSV data not found at {csv_path}. Please add the dataset there.")
+    local_path = "data/JioWorldCentre_Survey_Synthetic.csv"
+    github_csv_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/JioWorldCentre_Survey_Synthetic.csv"
+    try:
+        if os.path.exists(local_path):
+            return pd.read_csv(local_path)
+        else:
+            return pd.read_csv(github_csv_url)
+    except Exception as e:
+        st.error("CSV file not found locally or on GitHub. Please check file location or repo.")
         st.stop()
 
 df = load_data()
