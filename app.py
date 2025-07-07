@@ -35,7 +35,6 @@ st.set_page_config(
 
 # 1) Point to the *raw* URL of your logo in GitHub
 logo_url = "https://github.com/Subhayu25/JWC/blob/8f4f29b0abc9b332e00072750aff88470ea8a4cf/logo_jwc.png"
-st.write("🔗 Logo URL:", logo_url)
 
 # 2) Let Streamlit fetch & render it
 st.image(logo_url, width=200)
