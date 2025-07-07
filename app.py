@@ -47,7 +47,7 @@ except Exception as e:
 @st.cache_data
 def load_data():
     local_path = "data/JioWorldCentre_Survey_Synthetic.csv"
-    github_csv_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/JioWorldCentre_Survey_Synthetic.csv"
+    github_csv_url = "https://raw.githubusercontent.com/Subhayu25/JWC/refs/heads/main/JioWorldCentre_Survey_Synthetic.csv"
     try:
         if os.path.exists(local_path):
             return pd.read_csv(local_path)
