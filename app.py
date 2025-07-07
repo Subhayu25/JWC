@@ -33,15 +33,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- DISPLAY LOGO AT TOP (Local or from GitHub raw) ---
-logo_path = "data/logo_JWC.png"
+# 1) Point to the *raw* URL of your logo in GitHub
 logo_url = "https://github.com/Subhayu25/JWC/blob/8f4f29b0abc9b332e00072750aff88470ea8a4cf/logo_jwc.png"
 
-if logo_path.exists():
-    logo_img = Image.open(logo_path)
-    st.image(logo_url, width=200)
-else:
-    st.warning(f"⚠️ Logo not found at {logo_path}")
+# 2) Let Streamlit fetch & render it
+st.image(logo_url, width=200)
 
 # --- LOAD DATA LOCALLY OR FROM GITHUB RAW ---
 @st.cache_data
